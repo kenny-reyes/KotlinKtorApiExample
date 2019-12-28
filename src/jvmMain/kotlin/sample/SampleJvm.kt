@@ -1,13 +1,12 @@
 package sample
 
-import io.ktor.application.*
-import io.ktor.html.*
-import io.ktor.http.content.*
-import io.ktor.routing.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import kotlinx.html.*
-import java.io.*
+import Sample.main
+import io.ktor.application.Application
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 
 actual class Sample {
     actual fun checkMe() = 42
@@ -17,27 +16,17 @@ actual object Platform {
     actual val name: String = "JVM"
 }
 
-fun main() {
-    embeddedServer(Netty, port = 8080, host = "127.0.0.1") {
-        routing {
-            get("/") {
-                call.respondHtml {
-                    head {
-                        title("Hello from Ktor!")
-                    }
-                    body {
-                        +"${hello()} from Ktor. Check me value: ${Sample().checkMe()}"
-                        div {
-                            id = "js-response"
-                            +"Loading..."
-                        }
-                        script(src = "/static/KotlinExample.js") {}
-                    }
-                }
-            }
-            static("/static") {
-                resource("KotlinExample.js")
-            }
-        }
-    }.start(wait = true)
+val LOG: Logger = LoggerFactory.getLogger("ktor-app")
+
+const val portArgName = "--server.port"
+const val defaultPort = 8080
+
+fun main(args: Array<String>) {
+    val portConfigured = args.isNotEmpty() && args[0].startsWith(portArgName)
+
+    val port = if (portConfigured) {
+        LOG.debug("Custom port configured: ${args[0]}")
+        args[0].split("=").last().trim().toInt()
+    } else defaultPort
+    embeddedServer(Netty, port, module = Application::main).start(wait = true)
 }
